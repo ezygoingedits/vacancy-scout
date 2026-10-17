@@ -181,7 +181,7 @@ $('analyze').addEventListener('click', async function() {
     partialOptions.slice(0, 50).forEach(function(option) {
       const box = addText($('results'), 'article', '', 'candidate');
       addText(box, 'h3', 'Partial option ' + option.rank + ' · ' + option.journeyFrom + ' → ' + option.journeyTo);
-      addText(box, 'span', option.coach + '/' + option.berth + ' · ' + option.coveredStationHops + ' route segment(s)', 'badge transfer');
+      addText(box, 'span', option.coach + '/' + option.berth + ' · ' + option.coveredStationHops + ' stop-to-stop leg(s)', 'badge transfer');
       addText(box, 'div', 'Chart segment: ' + option.availableFrom + ' → ' + option.availableTo +
         (option.splitNo == null ? '' : ' · split ' + option.splitNo), 'leg');
       addText(box, 'div', (option.startsAtBoarding ? 'Covers your boarding station' : 'Starts after your boarding station') +

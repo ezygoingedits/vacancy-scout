@@ -27,20 +27,26 @@ function code(value) {
 }
 function normalizeRouteStops(payload) {
   const candidates = [
+    payload && payload.data && payload.data.route,
     payload && payload.data && payload.data.stops,
+    payload && payload.route,
     payload && payload.stops,
     payload && payload.data && payload.data.route && payload.data.route.stops,
     payload && payload.route && payload.route.stops,
-    payload && payload.data && payload.data.route,
-    payload && payload.route,
     payload && payload.data && payload.data.Route,
     payload && payload.Route
   ];
   const raw = candidates.find(Array.isArray);
   if (!raw) return [];
   const stops = raw.map((item, index) => {
-    const stationCode = code(item && (item.code || item.stationCode || item.station_code || item.StationCode || item.station));
-    const name = String(item && (item.name || item.stationName || item.station_name || item.StationName) || stationCode).trim();
+    const station = item && item.station && typeof item.station === 'object' ? item.station : {};
+    const stationCode = code(item && (
+      item.code || item.stationCode || item.station_code || item.StationCode ||
+      station.code || (typeof item.station === 'string' ? item.station : '')
+    ));
+    const name = String(item && (
+      item.name || item.stationName || item.station_name || item.StationName || station.name
+    ) || stationCode).trim();
     const sequenceValue = Number(item && (item.sequence ?? item.seq ?? item.routeNo ?? item.serialNo ?? item.SerialNo));
     return { code: stationCode, name, sequence: Number.isFinite(sequenceValue) && sequenceValue > 0 ? sequenceValue : index + 1 };
   }).filter(stop => stop.code);
@@ -216,7 +222,7 @@ app.get('/api/train-route/:number', async (req, res) => {
     return res.status(503).json({ error: 'Automatic route lookup is not configured on this server. Add RAILRADAR_API_KEY to the server environment, then restart or redeploy.' });
   }
   try {
-    const url = 'https://api.railradar.in/v1/trains/' + encodeURIComponent(trainNumber) + '/route?format=geojson&stops=true';
+    const url = 'https://api.railradar.in/v1/trains/' + encodeURIComponent(trainNumber) + '?haltsOnly=true';
     const upstream = await fetch(url, {
       method: 'GET',
       headers: { Authorization: 'Bearer ' + routeApiKey, Accept: 'application/json' },
