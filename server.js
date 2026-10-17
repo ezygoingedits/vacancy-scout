@@ -246,7 +246,12 @@ app.post('/api/ai-explain', async (req, res) => {
       error.code = String(apiError.status || apiError.code || payload.code || 'GeminiRESTError');
       throw error;
     }
-    return res.json({ explanation: payload.output_text || 'Gemini returned no text.' });
+    const textFromSteps = Array.isArray(payload.steps)
+      ? payload.steps.flatMap(step => Array.isArray(step.content) ? step.content : [])
+          .filter(item => item && item.type === 'text' && typeof item.text === 'string')
+          .map(item => item.text).join('\n')
+      : '';
+    return res.json({ explanation: payload.output_text || textFromSteps || 'Gemini returned no text.' });
   } catch (error) {
     const status = Number(error && (error.status || error.statusCode || error.httpStatus)) || 0;
     const code = String(error && (error.code || error.name) || 'GeminiError');
