@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Vacancy Scout Chart Bridge",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "With your explicit consent, capture the vacancy-chart JSON response from your active IRCTC chart page and pass it to the local Vacancy Scout app.",
   "permissions": [
     "storage"
