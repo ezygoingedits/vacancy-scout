@@ -1,5 +1,9 @@
 'use strict';
-const APP_URL_PATTERNS = ['http://localhost:3000/*', 'http://127.0.0.1:3000/*'];
+const APP_URL_PATTERNS = [
+  'https://vacancy-scout-ezygoingedits.onrender.com/*',
+  'http://localhost:3000/*',
+  'http://127.0.0.1:3000/*'
+];
 const IRCTC_URL_PATTERNS = [
   'https://www.irctc.co.in/online-charts/*',
   'https://irctc.co.in/online-charts/*'
@@ -48,10 +52,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const senderUrl = String(sender.url || '');
     let parsedSender;
     try { parsedSender = new URL(senderUrl); } catch (_) { sendResponse({ ok: false }); return false; }
-    const isChartPage = parsedSender.protocol === 'https:' &&
+    const validPage = parsedSender.protocol === 'https:' &&
       ['www.irctc.co.in', 'irctc.co.in'].includes(parsedSender.hostname) &&
       parsedSender.pathname.startsWith('/online-charts/');
-    if (!isChartPage) {
+    if (!validPage) {
       sendResponse({ ok: false, error: 'Capture was not received from an IRCTC chart page.' });
       return false;
     }
@@ -71,12 +75,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         ...(row.splitNo == null ? {} : { splitNo: row.splitNo }),
         ...(row.berthCode == null ? {} : { berthCode: String(row.berthCode).slice(0, 8) })
       }));
-    if (!safeRows.length) { sendResponse({ ok: false, error: 'No valid berth records were found.' }); return false; }
+    if (!safeRows.length) {
+      sendResponse({ ok: false, error: 'No valid berth records were found.' });
+      return false;
+    }
     chrome.storage.local.get({ captureEnabled: false }, (state) => {
-      if (!state.captureEnabled) { sendResponse({ ok: false, error: 'Capture is switched off.' }); return; }
+      if (!state.captureEnabled) {
+        sendResponse({ ok: false, error: 'Capture is switched off.' });
+        return;
+      }
       const capture = {
         payload: { vbd: safeRows },
-        sourceUrl: new URL(senderUrl).origin + '/online-charts/api/vacantBerth',
+        sourceUrl: parsedSender.origin + '/online-charts/api/vacantBerth',
         capturedAt: String(message.pageCapturedAt || new Date().toISOString()),
         recordCount: safeRows.length
       };

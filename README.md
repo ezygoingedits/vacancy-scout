@@ -1,19 +1,15 @@
 # Vacancy Scout
 
-Local web app for analyzing an IRCTC vacancy-chart JSON response, with an optional Chrome companion extension that captures the user's own chart response from an IRCTC page they open.
+A Node.js/Express app for analyzing a chart response that the user obtains from the IRCTC chart page. An optional Chrome companion extension captures the vacancy-chart response after the user explicitly enables it and passes normalized berth records to the app.
 
-## Run the app
+## Run locally
 1. Install Node.js 22 or newer.
-2. Run npm install in this folder.
-3. Copy .env.example to .env and add an OpenAI API key only if you want AI explanations. The local analyzer works without an AI key.
+2. Run npm install.
+3. Copy .env.example to .env. Leave OPENAI_API_KEY blank unless you have reviewed the AI endpoint's costs and abuse controls.
 4. Run npm start and open http://localhost:3000.
 
-## Capture chart data without manually uploading JSON
-See extension/README.md for Chrome extension installation and setup instructions.
+## Public deployment
+See DEPLOY.md and render.yaml. The site can be public while this GitHub repository remains private. The extension's production host must match the actual deployed URL.
 
-## Limits
-- This tool analyzes a chart snapshot. It does not show later TTE allotments or guarantee a berth remains available.
-- Transfer paths require railway staff confirmation.
-- Verify route station order for the train and travel date.
-- No live-data server scraper, login automation, access-control bypass or ticket booking is implemented.
-- Before publishing, confirm the permitted method for obtaining and processing live chart data.
+## Important limits
+The app analyzes a chart snapshot, not live TTE assignments. Transfer paths need railway staff confirmation. Verify station order for the specific train/date. No ticket booking, login automation, access-control bypass or server-side IRCTC scraping is implemented. Confirm the permitted method and terms for public data processing before launch.
