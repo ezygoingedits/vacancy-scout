@@ -184,6 +184,129 @@ function analyze(payload, from, to, route) {
     splitNo: option.splitNo,
     berthCode: option.berthCode
   }));
+  // Build joined, best-effort coverage plans: use captured berth segments where present
+  // and explicitly mark route intervals for which this snapshot has no matching segment.
+  const totalJourneyHops = endIndex - startIndex;
+  const completedPlanStates = [];
+  let planFrontier = [{
+    cursor: startIndex, items: [], coveredHops: 0, gapHops: 0, gapCount: 0, berthCount: 0
+  }];
+  const maxPlanExpansions = Math.min(100000, Math.max(5000, totalJourneyHops * 250));
+  let planExpansions = 0;
+  function comparePlanStates(a, b) {
+    if (a.coveredHops !== b.coveredHops) return b.coveredHops - a.coveredHops;
+    if (a.gapHops !== b.gapHops) return a.gapHops - b.gapHops;
+    if (a.gapCount !== b.gapCount) return a.gapCount - b.gapCount;
+    if (a.berthCount !== b.berthCount) return a.berthCount - b.berthCount;
+    return b.cursor - a.cursor;
+  }
+  while (planFrontier.length && planExpansions < maxPlanExpansions) {
+    const nextFrontier = [];
+    for (const state of planFrontier) {
+      if (state.cursor >= endIndex) {
+        if (state.gapCount > 0 && state.coveredHops > 0) completedPlanStates.push(state);
+        continue;
+      }
+      planExpansions++;
+      const active = segments.filter(segment =>
+        segment.fromIndex <= state.cursor &&
+        segment.toIndex > state.cursor &&
+        segment.fromIndex < endIndex
+      ).sort((a, b) =>
+        (b.toIndex - a.toIndex) ||
+        (Number(b.fromIndex === state.cursor) - Number(a.fromIndex === state.cursor)) ||
+        a.id - b.id
+      );
+      if (active.length) {
+        active.slice(0, 8).forEach(segment => {
+          const nextCursor = Math.min(segment.toIndex, endIndex);
+          if (nextCursor <= state.cursor) return;
+          nextFrontier.push({
+            cursor: nextCursor,
+            items: state.items.concat([{
+              type: 'berth',
+              segment,
+              startIndex: state.cursor,
+              endIndex: nextCursor
+            }]),
+            coveredHops: state.coveredHops + nextCursor - state.cursor,
+            gapHops: state.gapHops,
+            gapCount: state.gapCount,
+            berthCount: state.berthCount + 1
+          });
+        });
+      } else {
+        const futureStarts = segments
+          .filter(segment => segment.fromIndex > state.cursor && segment.fromIndex < endIndex)
+          .map(segment => segment.fromIndex);
+        const nextStationIndex = futureStarts.length ? Math.min(...futureStarts) : endIndex;
+        const gapEnd = Math.min(endIndex, Math.max(state.cursor + 1, nextStationIndex));
+        nextFrontier.push({
+          cursor: gapEnd,
+          items: state.items.concat([{
+            type: 'gap',
+            startIndex: state.cursor,
+            endIndex: gapEnd
+          }]),
+          coveredHops: state.coveredHops,
+          gapHops: state.gapHops + gapEnd - state.cursor,
+          gapCount: state.gapCount + 1,
+          berthCount: state.berthCount
+        });
+      }
+    }
+    const dedupedStates = new Map();
+    nextFrontier.forEach(state => {
+      const key = state.cursor + '|' + state.items.map(item =>
+        item.type === 'berth'
+          ? 'B' + item.segment.id + ':' + item.startIndex + '-' + item.endIndex
+          : 'G' + item.startIndex + '-' + item.endIndex
+      ).join('|');
+      if (!dedupedStates.has(key)) dedupedStates.set(key, state);
+    });
+    planFrontier = Array.from(dedupedStates.values()).sort(comparePlanStates).slice(0, 120);
+  }
+  planFrontier.forEach(state => {
+    if (state.cursor >= endIndex && state.gapCount > 0 && state.coveredHops > 0) completedPlanStates.push(state);
+  });
+  const planSeen = new Set();
+  const partialPlans = completedPlanStates
+    .sort(comparePlanStates)
+    .filter(state => {
+      const key = state.items.map(item => item.type === 'berth'
+        ? ['B', item.segment.coach, item.segment.berth, item.segment.from, item.segment.to, item.segment.splitNo, item.startIndex, item.endIndex].join(':')
+        : ['G', item.startIndex, item.endIndex].join(':')).join('|');
+      if (planSeen.has(key)) return false;
+      planSeen.add(key);
+      return true;
+    })
+    .slice(0, 5)
+    .map((state, index) => ({
+      rank: index + 1,
+      totalHops: totalJourneyHops,
+      coveredHops: state.coveredHops,
+      gapHops: state.gapHops,
+      gapCount: state.gapCount,
+      berthCount: state.berthCount,
+      coveragePercent: totalJourneyHops ? Math.round(state.coveredHops * 100 / totalJourneyHops) : 0,
+      items: state.items.map(item => item.type === 'berth' ? ({
+        type: 'berth',
+        coach: item.segment.coach,
+        berth: item.segment.berth,
+        from: route[item.startIndex] || item.segment.from,
+        to: route[item.endIndex] || item.segment.to,
+        chartFrom: item.segment.from,
+        chartTo: item.segment.to,
+        coveredHops: item.endIndex - item.startIndex,
+        splitNo: item.segment.splitNo,
+        berthCode: item.segment.berthCode || null
+      }) : ({
+        type: 'gap',
+        from: route[item.startIndex] || from,
+        to: route[item.endIndex] || to,
+        uncoveredHops: item.endIndex - item.startIndex
+      }))
+    }));
   const unlisted = Array.from(new Set(rows.flatMap(row => [code(row && row.from), code(row && row.to)]).filter(station => station && !indexByStation.has(station)))).sort();
   return {
     summary: {
@@ -192,12 +315,14 @@ function analyze(payload, from, to, route) {
       directCandidates: direct.length,
       partialOptionsFound: uniquePartialOptions.length,
       partialOptionsReturned: partialOptions.length,
+      partialPlansFound: partialPlans.length,
       skipped,
       unlistedStationCodes: unlisted, fromStation: from, toStation: to
     },
     candidates,
     partialOptions,
-    note: 'Only captured chart records are analyzed. Partial options cover only part of the requested trip and are not a full-journey berth. This is a static snapshot, not live availability or a confirmed TTE allotment. Transfer paths need railway staff confirmation.'
+    partialPlans,
+    note: 'Partial plans stitch together captured berth segments and explicitly mark gaps where no matching record was found in this snapshot. A gap does not prove no seat exists; the chart data may be incomplete. This is a static snapshot, not live availability or a confirmed TTE allotment. Transfer paths need railway staff confirmation.'
   };
 }
 
@@ -276,13 +401,15 @@ app.post('/api/ai-explain', async (req, res) => {
       'Explain the supplied train vacancy analysis in plain English.',
       'Treat it as a static snapshot. Do not invent timings, live availability, probabilities or TTE decisions.',
       'Do not change ranks. Clearly distinguish single-berth candidates from transfer paths.',
-      'Explain partial options separately and state that they do not cover the entire trip.',
+      'Explain the best partial coverage plans, including berth segments and explicitly listed gaps. A gap means no matching record in the snapshot, not proof no berth exists.',
+      'Explain individual partial options separately and state that they do not cover the entire trip.',
       'Keep the explanation short and actionable.',
       'Analysis JSON:',
       JSON.stringify({
         summary: analysis.summary,
         candidates: analysis.candidates.slice(0, 10),
         partialOptions: (analysis.partialOptions || []).slice(0, 10),
+        partialPlans: (analysis.partialPlans || []).slice(0, 3),
         note: analysis.note
       })
     ].join('\n\n');
