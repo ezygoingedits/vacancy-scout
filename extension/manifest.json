@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Vacancy Scout Chart Bridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "With your explicit consent, capture the vacancy-chart JSON response from your active IRCTC chart page and pass it to the local Vacancy Scout app.",
   "permissions": [
     "storage"
   ],
   "host_permissions": [
     "https://www.irctc.co.in/online-charts/*",
+    "https://irctc.co.in/online-charts/*",
     "http://localhost:3000/*",
     "http://127.0.0.1:3000/*"
   ],
@@ -21,7 +22,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.irctc.co.in/online-charts/*"
+        "https://www.irctc.co.in/online-charts/*",
+        "https://irctc.co.in/online-charts/*"
       ],
       "js": [
         "capture-main.js"
@@ -31,7 +33,8 @@
     },
     {
       "matches": [
-        "https://www.irctc.co.in/online-charts/*"
+        "https://www.irctc.co.in/online-charts/*",
+        "https://irctc.co.in/online-charts/*"
       ],
       "js": [
         "irctc-relay.js"

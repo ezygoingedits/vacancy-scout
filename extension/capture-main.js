@@ -2,22 +2,20 @@
   'use strict';
   const CHANNEL = 'VACANCY_SCOUT_PAGE_HOOK';
   let enabled = false;
-
   window.addEventListener('message', (event) => {
     if (event.source !== window || event.origin !== location.origin) return;
     const msg = event.data;
     if (!msg || msg.source !== 'VACANCY_SCOUT_CONTROL' || msg.type !== 'SET_CAPTURE') return;
     enabled = msg.enabled === true;
   });
-
   function isVacancyEndpoint(rawUrl) {
     try {
       const url = new URL(String(rawUrl || ''), location.href);
-      return url.origin === 'https://www.irctc.co.in' &&
+      return url.protocol === 'https:' &&
+        (url.hostname === 'www.irctc.co.in' || url.hostname === 'irctc.co.in') &&
         /\/online-charts\/api\/vacantBerth\/?$/.test(url.pathname);
     } catch (_) { return false; }
   }
-
   function extractRows(data) {
     if (Array.isArray(data)) return data;
     if (data && Array.isArray(data.vbd)) return data.vbd;
@@ -25,11 +23,9 @@
     if (data && Array.isArray(data.data)) return data.data;
     return null;
   }
-
   function safeString(value, max = 24) {
     return String(value == null ? '' : value).trim().slice(0, max);
   }
-
   function normalize(data) {
     const rows = extractRows(data);
     if (!rows || rows.length === 0 || rows.length > 10000) return null;
@@ -48,7 +44,6 @@
     }
     return vbd.length ? { vbd } : null;
   }
-
   function emit(rawUrl, data) {
     if (!enabled || !isVacancyEndpoint(rawUrl)) return;
     const payload = normalize(data);
@@ -57,10 +52,10 @@
       source: CHANNEL,
       type: 'CHART_CAPTURED',
       capturedAt: new Date().toISOString(),
+      sourceUrl: new URL(rawUrl, location.href).origin + '/online-charts/api/vacantBerth',
       payload
     }, location.origin);
   }
-
   const originalFetch = window.fetch;
   if (typeof originalFetch === 'function') {
     window.fetch = function(...args) {
@@ -76,7 +71,6 @@
       return promise;
     };
   }
-
   const originalOpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function(method, url, ...rest) {
     try { this.__vacancyScoutUrl = String(url || ''); } catch (_) {}
