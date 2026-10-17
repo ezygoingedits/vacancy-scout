@@ -1,12 +1,13 @@
 import 'dotenv/config';
 import express from 'express';
-import OpenAI from 'openai';
+import { GoogleGenAI } from '@google/genai';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const app = express();
 const root = path.dirname(fileURLToPath(import.meta.url));
-const ai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+const gemini = geminiKey ? new GoogleGenAI({ apiKey: geminiKey }) : null;
 const routeApiKey = process.env.RAILRADAR_API_KEY || '';
 const routeCache = new Map();
 const ROUTE_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
@@ -41,11 +42,7 @@ function normalizeRouteStops(payload) {
     const stationCode = code(item && (item.code || item.stationCode || item.station_code || item.StationCode || item.station));
     const name = String(item && (item.name || item.stationName || item.station_name || item.StationName) || stationCode).trim();
     const sequenceValue = Number(item && (item.sequence ?? item.seq ?? item.routeNo ?? item.serialNo ?? item.SerialNo));
-    return {
-      code: stationCode,
-      name,
-      sequence: Number.isFinite(sequenceValue) && sequenceValue > 0 ? sequenceValue : index + 1
-    };
+    return { code: stationCode, name, sequence: Number.isFinite(sequenceValue) && sequenceValue > 0 ? sequenceValue : index + 1 };
   }).filter(stop => stop.code);
   stops.sort((a, b) => a.sequence - b.sequence);
   const ordered = [];
@@ -62,9 +59,7 @@ function analyze(payload, from, to, route) {
   to = code(to || 'BOE');
   route = (route || []).map(code).filter(Boolean);
   const indexByStation = new Map();
-  route.forEach((station, index) => {
-    if (!indexByStation.has(station)) indexByStation.set(station, index);
-  });
+  route.forEach((station, index) => { if (!indexByStation.has(station)) indexByStation.set(station, index); });
   if (!indexByStation.has(from) || !indexByStation.has(to) || indexByStation.get(from) >= indexByStation.get(to)) {
     throw new Error('The route must include both selected stations, with boarding before destination. Fetch the train route or check the station codes.');
   }
@@ -82,10 +77,7 @@ function analyze(payload, from, to, route) {
     const fromIndex = indexByStation.get(fromCode);
     const toIndex = indexByStation.get(toCode);
     if (fromIndex >= toIndex) { skipped.invalidInterval++; return; }
-    segments.push({
-      id: index, coach, berth, from: fromCode, to: toCode, fromIndex, toIndex,
-      splitNo: row.splitNo ?? null, berthCode: code(row.berthCode)
-    });
+    segments.push({ id: index, coach, berth, from: fromCode, to: toCode, fromIndex, toIndex, splitNo: row.splitNo ?? null, berthCode: code(row.berthCode) });
   });
 
   const startIndex = indexByStation.get(from);
@@ -151,8 +143,9 @@ function analyze(payload, from, to, route) {
 
 app.get('/api/health', (req, res) => res.json({
   ok: true,
-  aiConfigured: Boolean(ai),
-  model: process.env.OPENAI_MODEL || 'gpt-5.5',
+  aiConfigured: Boolean(gemini),
+  aiProvider: 'Gemini',
+  model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
   routeLookupConfigured: Boolean(routeApiKey)
 }));
 
@@ -166,9 +159,7 @@ app.get('/api/train-route/:number', async (req, res) => {
     return res.json({ ...cached.result, cached: true });
   }
   if (!routeApiKey) {
-    return res.status(503).json({
-      error: 'Automatic route lookup is not configured on this server. Add RAILRADAR_API_KEY to the server environment, then restart or redeploy.'
-    });
+    return res.status(503).json({ error: 'Automatic route lookup is not configured on this server. Add RAILRADAR_API_KEY to the server environment, then restart or redeploy.' });
   }
   try {
     const url = 'https://api.railradar.in/v1/trains/' + encodeURIComponent(trainNumber) + '/route?format=geojson&stops=true';
@@ -180,22 +171,14 @@ app.get('/api/train-route/:number', async (req, res) => {
     let body = null;
     try { body = await upstream.json(); } catch (_) {}
     if (!upstream.ok) {
-      if (upstream.status === 401 || upstream.status === 403) {
-        return res.status(502).json({ error: 'The train-route provider rejected its API key. Check RAILRADAR_API_KEY in server settings.' });
-      }
-      if (upstream.status === 429) {
-        return res.status(429).json({ error: 'The train-route provider quota or rate limit has been reached. Try again later.' });
-      }
+      if (upstream.status === 401 || upstream.status === 403) return res.status(502).json({ error: 'The train-route provider rejected its API key. Check RAILRADAR_API_KEY in server settings.' });
+      if (upstream.status === 429) return res.status(429).json({ error: 'The train-route provider quota or rate limit has been reached. Try again later.' });
       if (upstream.status === 404) return res.status(404).json({ error: 'No route was found for that train number.' });
       return res.status(502).json({ error: 'The train-route provider is temporarily unavailable.' });
     }
-    if (body && body.success === false) {
-      return res.status(404).json({ error: body.error && body.error.message ? body.error.message : 'No route was found for that train number.' });
-    }
+    if (body && body.success === false) return res.status(404).json({ error: body.error && body.error.message ? body.error.message : 'No route was found for that train number.' });
     const stops = normalizeRouteStops(body);
-    if (stops.length < 2) {
-      return res.status(502).json({ error: 'The provider response did not contain an ordered station list.' });
-    }
+    if (stops.length < 2) return res.status(502).json({ error: 'The provider response did not contain an ordered station list.' });
     const result = {
       trainNumber,
       routeStations: stops.map(stop => stop.code),
@@ -209,9 +192,7 @@ app.get('/api/train-route/:number', async (req, res) => {
     return res.json(result);
   } catch (error) {
     const timedOut = error && (error.name === 'TimeoutError' || error.name === 'AbortError');
-    return res.status(502).json({
-      error: timedOut ? 'Train-route lookup timed out. Try again.' : 'Could not reach the train-route provider. Try again shortly.'
-    });
+    return res.status(502).json({ error: timedOut ? 'Train-route lookup timed out. Try again.' : 'Could not reach the train-route provider. Try again shortly.' });
   }
 });
 
@@ -227,22 +208,30 @@ app.post('/api/analyze', (req, res) => {
 });
 
 app.post('/api/ai-explain', async (req, res) => {
-  if (!ai) return res.status(503).json({ error: 'AI is not configured. Add OPENAI_API_KEY to the server environment.' });
+  if (!gemini) return res.status(503).json({ error: 'Gemini is not configured. Add GEMINI_API_KEY to the server environment.' });
   try {
     const analysis = req.body && req.body.analysis;
     if (!analysis || !Array.isArray(analysis.candidates)) return res.status(400).json({ error: 'Analyze the chart first.' });
-    const output = await ai.responses.create({
-      model: process.env.OPENAI_MODEL || 'gpt-5.5',
-      instructions: 'Explain the supplied train vacancy analysis in plain English. Treat it as a static snapshot. Do not invent timings, live availability, probability or TTE decisions. Do not change ranks. Clearly distinguish single-berth candidates from transfer paths.',
-      input: 'Explain these candidate paths for ' + analysis.summary.fromStation + ' to ' + analysis.summary.toStation +
-        '. Keep it short and actionable. Data: ' + JSON.stringify({
-          summary: analysis.summary, candidates: analysis.candidates.slice(0, 10), note: analysis.note
-        })
+    const prompt = [
+      'Explain the supplied train vacancy analysis in plain English.',
+      'Treat it as a static snapshot. Do not invent timings, live availability, probabilities or TTE decisions.',
+      'Do not change ranks. Clearly distinguish single-berth candidates from transfer paths.',
+      'Keep the explanation short and actionable.',
+      'Analysis JSON:',
+      JSON.stringify({
+        summary: analysis.summary,
+        candidates: analysis.candidates.slice(0, 10),
+        note: analysis.note
+      })
+    ].join('\n\n');
+    const response = await gemini.models.generateContent({
+      model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+      contents: prompt
     });
-    return res.json({ explanation: output.output_text || 'The AI returned no text.' });
+    return res.json({ explanation: response.text || 'Gemini returned no text.' });
   } catch (error) {
-    console.error('AI explanation failed:', error.message || error);
-    return res.status(502).json({ error: 'AI request failed. Check API key, model name and server logs.' });
+    console.error('Gemini explanation failed:', error && (error.message || error));
+    return res.status(502).json({ error: 'Gemini request failed. Check your API key, model name and quota.' });
   }
 });
 
