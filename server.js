@@ -224,22 +224,33 @@ app.post('/api/ai-explain', async (req, res) => {
         note: analysis.note
       })
     ].join('\n\n');
-    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
-    const response = await gemini.interactions.create({
-      model,
-      input: prompt,
-      store: false
+    const model = (process.env.GEMINI_MODEL || 'gemini-3.8-flash').trim();
+    const apiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': geminiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ model, input: prompt, store: false })
     });
-    return res.json({ explanation: response.output_text || 'Gemini returned no text.' });
+    const payload = await apiResponse.json().catch(() => ({}));
+    if (!apiResponse.ok) {
+      const apiError = payload && payload.error ? payload.error : {};
+      const error = new Error(String(apiError.message || 'Google returned HTTP ' + apiResponse.status));
+      error.status = apiResponse.status;
+      error.code = String(apiError.status || apiError.code || 'GeminiRESTError');
+      throw error;
+    }
+    return res.json({ explanation: payload.output_text || 'Gemini returned no text.' });
   } catch (error) {
     const status = Number(error && (error.status || error.statusCode || error.httpStatus)) || 0;
     const code = String(error && (error.code || error.name) || 'GeminiError');
     const message = String(error && error.message || error || 'Unknown Gemini error');
     console.error('Gemini explanation failed:', { status, code, message });
-    let hint = 'Gemini could not complete the request. Check the server logs for the exact error.';
-    if (status === 400 || status === 404) hint = 'Gemini rejected the request or model. Check GEMINI_MODEL and confirm that model is available to this API key.';
-    else if (status === 401 || status === 403) hint = 'Google rejected the API key or its permissions. Check GEMINI_API_KEY in the server environment.';
-    else if (status === 429) hint = 'Gemini quota or rate limit reached. Check the project quota and billing settings.';
+    let hint = 'Gemini could not complete the request. Check the diagnostic details.';
+    if (status === 400 || status === 404) hint = 'Google rejected the request. Details: ' + message;
+    else if (status === 401 || status === 403) hint = 'Google rejected the API key or its permissions. Details: ' + message;
+    else if (status === 429) hint = 'Gemini quota or rate limit reached. Details: ' + message;
     return res.status(502).json({ error: hint, diagnosticStatus: status || null, diagnosticCode: code });
   }
 });
