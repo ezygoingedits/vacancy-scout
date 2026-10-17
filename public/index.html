@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vacancy Scout</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#121a2d;--line:#2a3855;--text:#edf2ff;--muted:#a2afc8;--accent:#8fb5ff;--good:#8de0c0;--warn:#ffda91}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 10% 0%,#1d2a49 0,transparent 42%),var(--bg);color:var(--text);font:15px/1.5 system-ui,Segoe UI,sans-serif}main{max-width:1180px;margin:auto;padding:28px 18px 60px}.top{display:flex;justify-content:space-between;gap:20px;margin-bottom:22px}h1{font-size:clamp(30px,4vw,46px);margin:8px 0;letter-spacing:-.04em}h2{font-size:18px;margin:0 0 14px}.eyebrow{color:var(--accent);font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}p,.muted,.small{color:var(--muted)}.layout{display:grid;grid-template-columns:minmax(290px,390px) minmax(0,1fr);gap:16px}.panel{background:#121a2df2;border:1px solid var(--line);border-radius:18px;padding:18px;min-width:0}.field{display:flex;flex-direction:column;gap:6px;margin:12px 0}.field label{font-size:12px;color:var(--muted);font-weight:700}input,textarea{width:100%;background:#0b1325;border:1px solid #344363;border-radius:10px;color:var(--text);padding:10px;font:inherit}textarea{resize:vertical}.filepick{display:block;padding:14px;border:1px dashed #526587;border-radius:12px;color:var(--muted)}.filepick input{margin-top:8px}.buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}button{border:1px solid #637ba8;background:#d8e4ff;color:#101b32;border-radius:10px;padding:10px 13px;font-weight:700;cursor:pointer}button.secondary{background:#17243c;color:var(--text);border-color:#384b70}button:disabled{opacity:.5;cursor:wait}.notice{margin-top:14px;border:1px solid #695832;background:#302817;border-radius:12px;padding:12px;color:#ffdfa2;font-size:12px}.status{margin-top:14px;white-space:pre-wrap;color:var(--muted);font-size:13px}.pill{border:1px solid var(--line);border-radius:999px;padding:7px 10px;height:max-content;color:var(--muted);font-size:12px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.stat,.candidate{border:1px solid var(--line);border-radius:12px;background:#0d1629;padding:12px}.stat strong{display:block;font-size:22px}.stat span,.small{font-size:12px;color:var(--muted)}.candidate{margin-bottom:10px}.candidate h3{margin:0 0 8px;font-size:14px}.leg{display:block;margin:6px 0;padding:8px;border-radius:8px;background:#0c1528;border:1px solid #283957}.badge{font-size:11px;border-radius:999px;padding:4px 7px;background:#173d37;color:var(--good)}.transfer{background:#3c3017;color:var(--warn)}#aiout{white-space:pre-wrap;margin-top:12px;padding:14px;background:#0b1325;border:1px solid var(--line);border-radius:12px}.hidden{display:none!important}footer{margin-top:18px;font-size:11px;color:#71809d}@media(max-width:850px){.layout{grid-template-columns:1fr}.top{display:block}.pill{display:inline-block;margin-top:10px}}
+</style>
+</head>
+<body><main>
+<header class="top"><div><div class="eyebrow">Rail chart research · local prototype</div><h1>Vacancy Scout</h1><p>Find chart-listed vacancy segments that cover your trip, plus possible transfer paths.</p></div><div id="aiPill" class="pill">Checking AI setup…</div></header>
+<div class="layout">
+<section class="panel">
+<h2>01 / Load chart data</h2>
+<label class="filepick">Choose a saved API response (.json or .txt)<input id="file" type="file" accept=".json,.txt,application/json,text/plain"></label>
+<div class="field"><label for="json">Or paste the response body</label><textarea id="json" rows="8" placeholder='Paste JSON containing a "vbd" array here…'></textarea></div>
+<div class="field"><label for="from">Boarding station code</label><input id="from" value="PNBE"></div>
+<div class="field"><label for="to">Destination station code</label><input id="to" value="BOE"></div>
+<div class="field"><label for="route">Ordered route station codes (comma-separated)</label><textarea id="route" rows="4">ARA, DNR, PNBE, RJPB, PNC, BKG, FUT, KOO, BKP, BARH, MKA, HTZU, RJO, NBJU, BGS, LKN, KGG, MNE, MSK, NNR, THB, NNA, KTRH, KUE, CRR, KIR, LAV, AZR, BOE, SUD, TETA, DLK, KNE, AUB, TKG, BORA, SGUJ, NJP</textarea></div>
+<div class="small">Verify this route order for your journey date. Unknown station codes are skipped, not guessed.</div>
+<div class="buttons"><button id="analyze">Analyze chart</button><button id="clear" class="secondary">Clear</button></div>
+<div id="status" class="status">Waiting for JSON.</div>
+<div class="notice"><b>Important:</b> this analyzes a saved snapshot. It does not book tickets, verify live availability or contact a TTE.</div>
+</section>
+<section class="panel">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2>02 / Candidate paths</h2><button id="ai" class="secondary" disabled>Explain with AI</button></div>
+<div id="stats" class="stats hidden"></div><div id="results"><div class="muted">Ranked candidates will appear here after analysis.</div></div><div id="aiout" class="hidden"></div>
+</section>
+</div>
+<footer>Node.js + Express + optional OpenAI Responses API. Keep API keys server-side. Use authorized data sources for any future live integration.</footer>
+</main>
+<script>
+const $ = function(id){return document.getElementById(id);};
+let latest = null;
+function addText(parent, tag, text, className){const el=document.createElement(tag);el.textContent=String(text==null?'':text);if(className)el.className=className;parent.appendChild(el);return el;}
+$('file').addEventListener('change',async function(e){const f=e.target.files&&e.target.files[0];if(!f)return;try{$('json').value=await f.text();$('status').textContent='Loaded '+f.name+' ('+f.size+' bytes). Click Analyze.';}catch(err){$('status').textContent='Could not read that file.';}});
+$('clear').addEventListener('click',function(){$('json').value='';$('file').value='';$('status').textContent='Cleared.';latest=null;$('stats').classList.add('hidden');$('results').textContent='Ranked candidates will appear here after analysis.';$('ai').disabled=true;$('aiout').classList.add('hidden');});
+async function health(){try{const r=await fetch('/api/health');const d=await r.json();$('aiPill').textContent=d.aiConfigured?'AI ready · '+d.model:'AI optional · not configured';}catch(e){$('aiPill').textContent='Server status unavailable';}}health();
+$('analyze').addEventListener('click',async function(){
+  $('status').textContent='Analyzing…';$('analyze').disabled=true;$('ai').disabled=true;$('aiout').classList.add('hidden');
+  try{
+    const payload=JSON.parse($('json').value);
+    const routeStations=$('route').value.split(',').map(function(x){return x.trim().toUpperCase();}).filter(Boolean);
+    const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:payload,fromStation:$('from').value,toStation:$('to').value,routeStations:routeStations})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Analysis failed.');
+    latest=d;$('stats').classList.remove('hidden');$('stats').textContent='';
+    [['Records',d.summary.recordsReceived],['Valid segments',d.summary.validSegments],['Paths found',d.summary.candidatesFound]].forEach(function(v){const box=addText($('stats'),'div','', 'stat');addText(box,'strong',v[1]);addText(box,'span',v[0]);});
+    $('results').textContent='';
+    if(!d.candidates.length)addText($('results'),'p','No full trip path found. Check the station sequence.');
+    d.candidates.forEach(function(c){
+      const box=addText($('results'),'article','','candidate');
+      const h=addText(box,'h3','Rank '+c.rank+' · '+c.kind);
+      addText(box,'span',c.direct?'Single berth':'Transfer path','badge'+(c.direct?'':' transfer'));
+      c.legs.forEach(function(l){const text=l.coach+'/'+l.berth+' · '+l.from+' → '+l.to+(l.splitNo==null?'':' · split '+l.splitNo);addText(box,'div',text,'leg');});
+    });
+    const s=d.summary.skipped;
+    $('status').textContent='Analyzed '+d.summary.recordsReceived+' records. Valid segments: '+d.summary.validSegments+'. Skipped: '+(s.malformed+s.unknownStation+s.invalidInterval)+'. '+d.note;
+    $('ai').disabled=false;
+  }catch(e){$('status').textContent=e.message||'Could not analyze JSON.';}
+  finally{$('analyze').disabled=false;}
+});
+$('ai').addEventListener('click',async function(){
+ if(!latest)return;$('ai').disabled=true;$('aiout').classList.remove('hidden');$('aiout').textContent='Requesting AI explanation…';
+ try{const r=await fetch('/api/ai-explain',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({analysis:latest})});const d=await r.json();if(!r.ok)throw new Error(d.error||'AI request failed.');$('aiout').textContent=d.explanation;}
+ catch(e){$('aiout').textContent=e.message||'AI request failed.';}
+ finally{$('ai').disabled=false;}
+});
+</script></body></html>

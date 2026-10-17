@@ -1,1 +1,114 @@
-import 'dot^žö6öæf–rs°¦–×÷'BW‡&W72g&öÒvW‡&W72s°¦–×÷'B÷Vä’g&öÒv÷Væ’s°¦–×÷'BF‚g&öÒvæöFS§F‚s°¦–×÷'B²f–ÆUU$ÅFõF‚Òg&öÒvæöFS§W&Âs° ¦6öç7BõöF—&æÖRÒF‚æF—&æÖR†f–ÆUU$ÅFõF‚†–×÷'BæÖWFçW&Â’“°¦6öç7BÒW‡&W72‚“°¦çW6R†W‡&W72æ§6öâ‡²Æ–Ö—C¢s#Ö"rÒ’“°¦çW6R†W‡&W72ç7FF–2‡F‚æ¦ö–â…õöF—&æÖRÂwV&Æ–2r’’“° ¦6öç7Bõ%BÒçVÖ&W"‡&ö6W72æVçbåõ%BÇÂ3“°¦6öç7B÷Væ’Ò&ö6W72æVçbäõTä•ô•ô´U’òæWr÷Vä’‡²”¶W“¢&ö6W72æVçbäõTä•ô•ô´U’Ò’¢çVÆÃ° ¦gVæ7F–öâvWE&V6÷&G2‡–ÆöB’°¢–b„'&’æ—4'&’‡–ÆöB’’&WGW&â–ÆöC°¢–b‡–ÆöBbb'&’æ—4'&’‡–ÆöBçf&B’’&WGW&â–ÆöBçf&C°¢–b‡–ÆöBbb–ÆöBæFFbb'&’æ—4'&’‡–ÆöBæFFçf&B’’&WGW&â–ÆöBæFFçf&C°¢–b‡–ÆöBbb'&’æ—4'&’‡–ÆöBæFF’’&WGW&â–ÆöBæFF°¢F‡&÷ræWrW'&÷"‚t6÷VÆBæ÷Bf–æBâ'&’âW‡V7FVB¥4ôâ6†VBÆ–¶R²'f&B#¢²âââÒÒâr“°§Ð ¦gVæ7F–öâæ÷&Ô6öFR‡fÇVR’²&WGW&â7G&–ær‡fÇVRóòrr’çG&–Ò‚’çFõWW$66R‚“²Ð¦gVæ7F–öâæ÷&Ô&W'F‚‡&÷r’°¢6öç7B6ö6‚Ò7G&–ær‡&÷ræ6ö6„æÖRóò&÷ræ6ö6‚óòrr’çG&–Ò‚’çFõWW$66R‚“°¢6öç7B&W'F‚Ò7G&–ær‡&÷ræ&W'F„çVÖ&W"óò&÷ræ&W'F„æòóò&÷ræ&W'F‚óòrr’çG&–Ò‚“°¢&WGW&â²6ö6‚Â&W'F‚Ó°§Ð ¢òò&÷r—2Æ—7FVBf6æ7’–çFW'fÂÂæ÷B&ööböb7W'&VçBEDRÆÆ÷FÖVçBà¦gVæ7F–öâæÇ—¦R‡–ÆöBÂ÷F–öç2’°¢6öç7B&rÒvWE&V6÷&G2‡–ÆöB“°¢6öç7B7F'BÒæ÷&Ô6öFR†÷F–öç2æg&öÕ7FF–öâÇÂuä$Rr“°¢6öç7BVæBÒæ÷&Ô6öFR†÷F–öç2çFõ7FF–öâÇÂt$ôRr“°¢6öç7B&÷WFRÒ†÷F–öç2ç&÷WFU7FF–öç2ÇÂµÒ’æÖ†æ÷&Ô6öFR’æf–ÇFW"„&ööÆVâ“°¢6öç7B÷&FW"ÒæWrÖ‚“°¢&÷WFRæf÷$V6‚‚‡7FF–öâÂ–æFW‚’Óâ²–b‚÷&FW"æ†2‡7FF–öâ’’÷&FW"ç6WB‡7FF–öâÂ–æFW‚“²Ò“°¢–b‚÷&FW"æ†2‡7F'B’ÇÂ÷&FW"æ†2†VæB’’°¢F‡&÷ræWrW'&÷"†F†R&÷WFR6WVVæ6R×W7B–æ6ÇVFR&÷F‚G·7F'GÒæBG¶VæGÒæ“°¢Ð¢6öç7B7F'D—‚Ò÷&FW"ævWB‡7F'B’ÂVæD—‚Ò÷&FW"ævWB†VæB“°¢–b‡7F'D—‚ãÒVæD—‚’F‡&÷ræWrW'&÷"‚uF†R&÷WFR6WVVæ6R×W7BÆ—7BF†R&ö&F–ær7FF–öâ&Vf÷&RF†RFW7F–æF–öââr“° ¢6öç7B6¶—VBÒ²ÖÆf÷&ÖVC¢ÂVæ¶æ÷vå7FF–öã¢Â–çfÆ–D–çFW'fÃ¢Ó°¢6öç7B6VvÖVçG2ÒµÓ°¢&ræf÷$V6‚‚‡"Â–æFW‚’Óâ°¢–b‚"ÇÂG—Vöb"ÓÒvö&¦V7Br’²6¶—VBæÖÆf÷&ÖVB²³²&WGW&ã²Ð¢6öç7B²6ö6‚Â&W'F‚ÒÒæ÷&Ô&W'F‚‡"“°¢6öç7Bg&öÒÒæ÷&Ô6öFR‡"æg&öÒóò"æg&öÕ7FF–öâ“°¢6öç7BFòÒæ÷&Ô6öFR‡"çFòóò"çFõ7FF–öâ“°¢–b‚6ö6‚ÇÂ&W'F‚ÇÂg&öÒÇÂFò’²6¶—VBæÖÆf÷&ÖVB²³²&WGW&ã²Ð¢–b‚÷&FW"æ†2†g&öÒ’ÇÂ÷&FW"æ†2‡Fò’’²6¶—VBçVæ¶æ÷vå7FF–öâ²³²&WGW&ã²Ð¢6öç7Bg&öÔ—‚Ò÷&FW"ævWB†g&öÒ’ÂFô—‚Ò÷&FW"ævWB‡Fò“°¢–b†g&öÔ—‚ãÒFô—‚’²6¶—VBæ–çfÆ–D–çFW'fÂ²³²&WGW&ã²Ð¢6VvÖVçG2çW6‚‡°¢–C¢–æFW‚Â6ö6‚Â&W'F‚Âg&öÒÂFòÂg&öÔ—‚ÂFô—‚À¢7Æ—Dæó¢"ç7Æ—DæòóòçVÆÂÀ¢&W'F„6öFS¢7G&–ær‡"æ&W'F„6öFRóòrr’çG&–Ò‚’À¢Ò“°¢Ò“° ¢6öç7BF—&V7BÒ6VvÖVçG0¢æf–ÇFW"‡2Óâ2æg&öÔ—‚ÃÒ7F'D—‚bb2çFô—‚ãÒVæD—‚¢æÖ‡2Óâ‡²ÆVw3¢·5ÒÂF—&V7C¢G'VRÒ’“° ¢òò'V–ÆBW†7BVæGö–çB×FòÖVæGö–çBF‡2âG&ç6fW'2öæÇ’¦ö–âv†W&RöæRÆ—7FV@¢òò–çFW'fÂVæG2BF†R6ÖR7FF–öâv†W&RF†RæW‡BÆ—7FVB–çFW'fÂ&Vv–ç2à¢6öç7B÷WFvö–ærÒæWrÖ‚“°¢f÷"†6öç7B2öb6VvÖVçG2’°¢–b‚÷WFvö–æræ†2‡2æg&öÔ—‚’’÷WFvö–ærç6WB‡2æg&öÔ—‚ÂµÒ“°¢÷WFvö–ærævWB‡2æg&öÔ—‚’çW6‚‡2“°¢Ð¢f÷"†6öç7BÆ—7Böb÷WFvö–ærçfÇVW2‚’’Æ—7Bç6÷'B‚†Â"’Óâ"çFô—‚ÒçFô—‚“° ¢6öç7BF‡2ÒµÓ°¢6öç7BÔ…ôDUD‚ÒS°¢6öç7BÔ…õD…2Ò#°¢gVæ7F–öâvÆ²†Æ7BÂÆVw2’°¢–b‡F‡2æÆVæwF‚ãÒÔ…õD…
+import 'dotenv/config';
+import express from 'express';
+import OpenAI from 'openai';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const app = express();
+const root = path.dirname(fileURLToPath(import.meta.url));
+const ai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+app.use(express.json({ limit: '20mb' }));
+app.use(express.static(path.join(root, 'public')));
+
+function getRows(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload && payload.vbd)) return payload.vbd;
+  if (Array.isArray(payload && payload.data && payload.data.vbd)) return payload.data.vbd;
+  if (Array.isArray(payload && payload.data)) return payload.data;
+  throw new Error('Expected an array or an object containing a vbd array.');
+}
+function code(v) { return String(v == null ? '' : v).trim().toUpperCase(); }
+function analyze(payload, from, to, route) {
+  const rows = getRows(payload);
+  from = code(from || 'PNBE'); to = code(to || 'BOE');
+  route = (route || []).map(code).filter(Boolean);
+  const ix = new Map();
+  route.forEach((s, i) => { if (!ix.has(s)) ix.set(s, i); });
+  if (!ix.has(from) || !ix.has(to) || ix.get(from) >= ix.get(to)) {
+    throw new Error('Route order must include the boarding station before the destination.');
+  }
+  const skipped = { malformed: 0, unknownStation: 0, invalidInterval: 0 };
+  const segments = [];
+  rows.forEach((r, i) => {
+    const coach = code(r && (r.coachName || r.coach));
+    const berth = String(r && (r.berthNumber == null ? (r.berthNo == null ? r.berth : r.berthNo) : r.berthNumber) || '').trim();
+    const a = code(r && (r.from || r.fromStation));
+    const b = code(r && (r.to || r.toStation));
+    if (!coach || !berth || !a || !b) { skipped.malformed++; return; }
+    if (!ix.has(a) || !ix.has(b)) { skipped.unknownStation++; return; }
+    if (ix.get(a) >= ix.get(b)) { skipped.invalidInterval++; return; }
+    segments.push({ id: i, coach: coach, berth: berth, from: a, to: b, a: ix.get(a), b: ix.get(b), splitNo: r.splitNo == null ? null : r.splitNo, berthCode: code(r.berthCode) });
+  });
+  const start = ix.get(from), end = ix.get(to);
+  const direct = segments.filter(s => s.a <= start && s.b >= end).map(s => [s]);
+  const outgoing = new Map();
+  segments.forEach(s => { if (!outgoing.has(s.a)) outgoing.set(s.a, []); outgoing.get(s.a).push(s); });
+  outgoing.forEach(v => v.sort((a, b) => b.b - a.b));
+  const transfers = [];
+  function walk(last, legs) {
+    if (legs.length >= 4 || transfers.length >= 20000) return;
+    (outgoing.get(last.b) || []).forEach(next => {
+      if (next.b <= last.b || legs.some(l => l.id === next.id)) return;
+      const path = legs.concat([next]);
+      if (next.b >= end) transfers.push(path);
+      else walk(next, path);
+    });
+  }
+  segments.forEach(first => {
+    if (first.a <= start && first.b > start && first.b < end) walk(first, [first]);
+  });
+  const all = direct.concat(transfers);
+  const seen = new Set();
+  const unique = all.filter(path => {
+    const key = path.map(s => s.coach + '/' + s.berth + ':' + s.from + '-' + s.to + ':' + s.splitNo).join('|');
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+  unique.sort((x, y) => {
+    if (x.length !== y.length) return x.length - y.length;
+    const xFirst = x[0].b - Math.max(x[0].a, start);
+    const yFirst = y[0].b - Math.max(y[0].a, start);
+    if (xFirst !== yFirst) return yFirst - xFirst;
+    return y[y.length - 1].b - x[x.length - 1].b;
+  });
+  const candidates = unique.slice(0, 50).map((path, n) => ({
+    rank: n + 1,
+    direct: path.length === 1,
+    kind: path.length === 1 ? 'Single berth' : path.length + ' segments / ' + (path.length - 1) + ' transfer(s)',
+    legs: path.map((s, i) => ({ leg: i + 1, coach: s.coach, berth: s.berth, from: s.from, to: s.to, splitNo: s.splitNo, berthCode: s.berthCode || null }))
+  }));
+  const unlisted = Array.from(new Set(rows.flatMap(r => [code(r && r.from), code(r && r.to)]).filter(s => s && !ix.has(s)))).sort();
+  return {
+    summary: { recordsReceived: rows.length, validSegments: segments.length, candidatesFound: unique.length, returned: candidates.length, directCandidates: direct.length, skipped: skipped, unlistedStationCodes: unlisted, fromStation: from, toStation: to },
+    candidates: candidates,
+    note: 'This is a static chart snapshot, not live availability or a confirmed TTE allotment. Transfer paths need railway staff confirmation.'
+  };
+}
+app.get('/api/health', (req, res) => res.json({ ok: true, aiConfigured: Boolean(ai), model: process.env.OPENAI_MODEL || 'gpt-5.5' }));
+app.post('/api/analyze', (req, res) => {
+  try {
+    const b = req.body || {};
+    if (!b.payload) return res.status(400).json({ error: 'Upload or paste chart JSON first.' });
+    if (!Array.isArray(b.routeStations)) return res.status(400).json({ error: 'Supply the ordered route station codes.' });
+    res.json(analyze(b.payload, b.fromStation, b.toStation, b.routeStations));
+  } catch (e) { res.status(400).json({ error: e.message || 'Analysis failed.' }); }
+});
+app.post('/api/ai-explain', async (req, res) => {
+  if (!ai) return res.status(503).json({ error: 'AI is not configured. Add OPENAI_API_KEY to .env.' });
+  try {
+    const a = req.body && req.body.analysis;
+    if (!a || !Array.isArray(a.candidates)) return res.status(400).json({ error: 'Analyze the chart first.' });
+    const out = await ai.responses.create({
+      model: process.env.OPENAI_MODEL || 'gpt-5.5',
+      instructions: 'Explain the supplied train vacancy analysis in plain English. Treat it as a static snapshot. Do not invent timings, live availability, probability or TTE decisions. Do not change ranks. Clearly distinguish single-berth candidates from transfer paths.',
+      input: 'Explain these candidate paths for ' + a.summary.fromStation + ' to ' + a.summary.toStation + '. Keep it short and actionable. Data: ' + JSON.stringify({ summary: a.summary, candidates: a.candidates.slice(0, 10), note: a.note })
+    });
+    res.json({ explanation: out.output_text || 'The AI returned no text.' });
+  } catch (e) {
+    console.error('AI explanation failed:', e.message || e);
+    res.status(502).json({ error: 'AI request failed. Check API key, model name and server logs.' });
+  }
+});
+app.get('*', (req, res) => res.sendFile(path.join(root, 'public', 'index.html')));
+const port = Number(process.env.PORT || 3000);
+app.listen(port, () => console.log('Vacancy Scout running at http://localhost:' + port));
