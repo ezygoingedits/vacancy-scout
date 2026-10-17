@@ -7,108 +7,245 @@ import { fileURLToPath } from 'node:url';
 const app = express();
 const root = path.dirname(fileURLToPath(import.meta.url));
 const ai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+const routeApiKey = process.env.RAILRADAR_API_KEY || '';
+const routeCache = new Map();
+const ROUTE_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(root, 'public')));
 
 function getRows(payload) {
   if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload && payload.vbd)) return payload.vbd;
-  if (Array.isArray(payload && payload.data && payload.data.vbd)) return payload.data.vbd;
-  if (Array.isArray(payload && payload.data)) return payload.data;
+  if (payload && Array.isArray(payload.vbd)) return payload.vbd;
+  if (payload && payload.data && Array.isArray(payload.data.vbd)) return payload.data.vbd;
+  if (payload && Array.isArray(payload.data)) return payload.data;
   throw new Error('Expected an array or an object containing a vbd array.');
 }
-function code(v) { return String(v == null ? '' : v).trim().toUpperCase(); }
+function code(value) {
+  return String(value == null ? '' : value).trim().toUpperCase();
+}
+function normalizeRouteStops(payload) {
+  const candidates = [
+    payload && payload.data && payload.data.stops,
+    payload && payload.stops,
+    payload && payload.data && payload.data.route && payload.data.route.stops,
+    payload && payload.route && payload.route.stops,
+    payload && payload.data && payload.data.route,
+    payload && payload.route,
+    payload && payload.data && payload.data.Route,
+    payload && payload.Route
+  ];
+  const raw = candidates.find(Array.isArray);
+  if (!raw) return [];
+  const stops = raw.map((item, index) => {
+    const stationCode = code(item && (item.code || item.stationCode || item.station_code || item.StationCode || item.station));
+    const name = String(item && (item.name || item.stationName || item.station_name || item.StationName) || stationCode).trim();
+    const sequenceValue = Number(item && (item.sequence ?? item.seq ?? item.routeNo ?? item.serialNo ?? item.SerialNo));
+    return {
+      code: stationCode,
+      name,
+      sequence: Number.isFinite(sequenceValue) && sequenceValue > 0 ? sequenceValue : index + 1
+    };
+  }).filter(stop => stop.code);
+  stops.sort((a, b) => a.sequence - b.sequence);
+  const ordered = [];
+  for (const stop of stops) {
+    if (ordered.length && ordered[ordered.length - 1].code === stop.code) continue;
+    ordered.push(stop);
+  }
+  return ordered;
+}
+
 function analyze(payload, from, to, route) {
   const rows = getRows(payload);
-  from = code(from || 'PNBE'); to = code(to || 'BOE');
+  from = code(from || 'PNBE');
+  to = code(to || 'BOE');
   route = (route || []).map(code).filter(Boolean);
-  const ix = new Map();
-  route.forEach((s, i) => { if (!ix.has(s)) ix.set(s, i); });
-  if (!ix.has(from) || !ix.has(to) || ix.get(from) >= ix.get(to)) {
-    throw new Error('Route order must include the boarding station before the destination.');
+  const indexByStation = new Map();
+  route.forEach((station, index) => {
+    if (!indexByStation.has(station)) indexByStation.set(station, index);
+  });
+  if (!indexByStation.has(from) || !indexByStation.has(to) || indexByStation.get(from) >= indexByStation.get(to)) {
+    throw new Error('The route must include both selected stations, with boarding before destination. Fetch the train route or check the station codes.');
   }
+
   const skipped = { malformed: 0, unknownStation: 0, invalidInterval: 0 };
   const segments = [];
-  rows.forEach((r, i) => {
-    const coach = code(r && (r.coachName || r.coach));
-    const berth = String(r && (r.berthNumber == null ? (r.berthNo == null ? r.berth : r.berthNo) : r.berthNumber) || '').trim();
-    const a = code(r && (r.from || r.fromStation));
-    const b = code(r && (r.to || r.toStation));
-    if (!coach || !berth || !a || !b) { skipped.malformed++; return; }
-    if (!ix.has(a) || !ix.has(b)) { skipped.unknownStation++; return; }
-    if (ix.get(a) >= ix.get(b)) { skipped.invalidInterval++; return; }
-    segments.push({ id: i, coach: coach, berth: berth, from: a, to: b, a: ix.get(a), b: ix.get(b), splitNo: r.splitNo == null ? null : r.splitNo, berthCode: code(r.berthCode) });
+  rows.forEach((row, index) => {
+    if (!row || typeof row !== 'object') { skipped.malformed++; return; }
+    const coach = code(row.coachName || row.coach);
+    const berth = String(row.berthNumber ?? row.berthNo ?? row.berth ?? '').trim();
+    const fromCode = code(row.from || row.fromStation);
+    const toCode = code(row.to || row.toStation);
+    if (!coach || !berth || !fromCode || !toCode) { skipped.malformed++; return; }
+    if (!indexByStation.has(fromCode) || !indexByStation.has(toCode)) { skipped.unknownStation++; return; }
+    const fromIndex = indexByStation.get(fromCode);
+    const toIndex = indexByStation.get(toCode);
+    if (fromIndex >= toIndex) { skipped.invalidInterval++; return; }
+    segments.push({
+      id: index, coach, berth, from: fromCode, to: toCode, fromIndex, toIndex,
+      splitNo: row.splitNo ?? null, berthCode: code(row.berthCode)
+    });
   });
-  const start = ix.get(from), end = ix.get(to);
-  const direct = segments.filter(s => s.a <= start && s.b >= end).map(s => [s]);
+
+  const startIndex = indexByStation.get(from);
+  const endIndex = indexByStation.get(to);
+  const direct = segments.filter(segment => segment.fromIndex <= startIndex && segment.toIndex >= endIndex).map(segment => [segment]);
   const outgoing = new Map();
-  segments.forEach(s => { if (!outgoing.has(s.a)) outgoing.set(s.a, []); outgoing.get(s.a).push(s); });
-  outgoing.forEach(v => v.sort((a, b) => b.b - a.b));
+  segments.forEach(segment => {
+    if (!outgoing.has(segment.fromIndex)) outgoing.set(segment.fromIndex, []);
+    outgoing.get(segment.fromIndex).push(segment);
+  });
+  outgoing.forEach(list => list.sort((a, b) => b.toIndex - a.toIndex));
+
   const transfers = [];
   function walk(last, legs) {
     if (legs.length >= 4 || transfers.length >= 20000) return;
-    (outgoing.get(last.b) || []).forEach(next => {
-      if (next.b <= last.b || legs.some(l => l.id === next.id)) return;
-      const path = legs.concat([next]);
-      if (next.b >= end) transfers.push(path);
-      else walk(next, path);
+    (outgoing.get(last.toIndex) || []).forEach(next => {
+      if (next.toIndex <= last.toIndex || legs.some(leg => leg.id === next.id)) return;
+      const nextPath = legs.concat([next]);
+      if (next.toIndex >= endIndex) transfers.push(nextPath);
+      else walk(next, nextPath);
     });
   }
   segments.forEach(first => {
-    if (first.a <= start && first.b > start && first.b < end) walk(first, [first]);
+    if (first.fromIndex <= startIndex && first.toIndex > startIndex && first.toIndex < endIndex) walk(first, [first]);
   });
-  const all = direct.concat(transfers);
+
   const seen = new Set();
-  const unique = all.filter(path => {
-    const key = path.map(s => s.coach + '/' + s.berth + ':' + s.from + '-' + s.to + ':' + s.splitNo).join('|');
+  const uniquePaths = direct.concat(transfers).filter(path => {
+    const key = path.map(segment => segment.coach + '/' + segment.berth + ':' + segment.from + '-' + segment.to + ':' + segment.splitNo).join('|');
     if (seen.has(key)) return false;
-    seen.add(key); return true;
+    seen.add(key);
+    return true;
   });
-  unique.sort((x, y) => {
-    if (x.length !== y.length) return x.length - y.length;
-    const xFirst = x[0].b - Math.max(x[0].a, start);
-    const yFirst = y[0].b - Math.max(y[0].a, start);
-    if (xFirst !== yFirst) return yFirst - xFirst;
-    return y[y.length - 1].b - x[x.length - 1].b;
+  uniquePaths.sort((a, b) => {
+    if (a.length !== b.length) return a.length - b.length;
+    const firstA = a[0].toIndex - Math.max(a[0].fromIndex, startIndex);
+    const firstB = b[0].toIndex - Math.max(b[0].fromIndex, startIndex);
+    if (firstA !== firstB) return firstB - firstA;
+    return b[b.length - 1].toIndex - a[a.length - 1].toIndex;
   });
-  const candidates = unique.slice(0, 50).map((path, n) => ({
-    rank: n + 1,
-    direct: path.length === 1,
-    kind: path.length === 1 ? 'Single berth' : path.length + ' segments / ' + (path.length - 1) + ' transfer(s)',
-    legs: path.map((s, i) => ({ leg: i + 1, coach: s.coach, berth: s.berth, from: s.from, to: s.to, splitNo: s.splitNo, berthCode: s.berthCode || null }))
+
+  const candidates = uniquePaths.slice(0, 50).map((journey, index) => ({
+    rank: index + 1,
+    direct: journey.length === 1,
+    kind: journey.length === 1 ? 'Single berth' : journey.length + ' segments / ' + (journey.length - 1) + ' transfer(s)',
+    legs: journey.map((segment, legIndex) => ({
+      leg: legIndex + 1, coach: segment.coach, berth: segment.berth, from: segment.from,
+      to: segment.to, splitNo: segment.splitNo, berthCode: segment.berthCode || null
+    }))
   }));
-  const unlisted = Array.from(new Set(rows.flatMap(r => [code(r && r.from), code(r && r.to)]).filter(s => s && !ix.has(s)))).sort();
+  const unlisted = Array.from(new Set(rows.flatMap(row => [code(row && row.from), code(row && row.to)]).filter(station => station && !indexByStation.has(station)))).sort();
   return {
-    summary: { recordsReceived: rows.length, validSegments: segments.length, candidatesFound: unique.length, returned: candidates.length, directCandidates: direct.length, skipped: skipped, unlistedStationCodes: unlisted, fromStation: from, toStation: to },
-    candidates: candidates,
+    summary: {
+      recordsReceived: rows.length, validSegments: segments.length,
+      candidatesFound: uniquePaths.length, returned: candidates.length,
+      directCandidates: direct.length, skipped,
+      unlistedStationCodes: unlisted, fromStation: from, toStation: to
+    },
+    candidates,
     note: 'This is a static chart snapshot, not live availability or a confirmed TTE allotment. Transfer paths need railway staff confirmation.'
   };
 }
-app.get('/api/health', (req, res) => res.json({ ok: true, aiConfigured: Boolean(ai), model: process.env.OPENAI_MODEL || 'gpt-5.5' }));
-app.post('/api/analyze', (req, res) => {
-  try {
-    const b = req.body || {};
-    if (!b.payload) return res.status(400).json({ error: 'Upload or paste chart JSON first.' });
-    if (!Array.isArray(b.routeStations)) return res.status(400).json({ error: 'Supply the ordered route station codes.' });
-    res.json(analyze(b.payload, b.fromStation, b.toStation, b.routeStations));
-  } catch (e) { res.status(400).json({ error: e.message || 'Analysis failed.' }); }
-});
-app.post('/api/ai-explain', async (req, res) => {
-  if (!ai) return res.status(503).json({ error: 'AI is not configured. Add OPENAI_API_KEY to .env.' });
-  try {
-    const a = req.body && req.body.analysis;
-    if (!a || !Array.isArray(a.candidates)) return res.status(400).json({ error: 'Analyze the chart first.' });
-    const out = await ai.responses.create({
-      model: process.env.OPENAI_MODEL || 'gpt-5.5',
-      instructions: 'Explain the supplied train vacancy analysis in plain English. Treat it as a static snapshot. Do not invent timings, live availability, probability or TTE decisions. Do not change ranks. Clearly distinguish single-berth candidates from transfer paths.',
-      input: 'Explain these candidate paths for ' + a.summary.fromStation + ' to ' + a.summary.toStation + '. Keep it short and actionable. Data: ' + JSON.stringify({ summary: a.summary, candidates: a.candidates.slice(0, 10), note: a.note })
+
+app.get('/api/health', (req, res) => res.json({
+  ok: true,
+  aiConfigured: Boolean(ai),
+  model: process.env.OPENAI_MODEL || 'gpt-5.5',
+  routeLookupConfigured: Boolean(routeApiKey)
+}));
+
+app.get('/api/train-route/:number', async (req, res) => {
+  const trainNumber = String(req.params.number || '').trim();
+  if (!/^[0-9]{4,6}$/.test(trainNumber)) {
+    return res.status(400).json({ error: 'Enter a valid train number using 4 to 6 digits.' });
+  }
+  const cached = routeCache.get(trainNumber);
+  if (cached && Date.now() - cached.cachedAt < ROUTE_CACHE_TTL_MS) {
+    return res.json({ ...cached.result, cached: true });
+  }
+  if (!routeApiKey) {
+    return res.status(503).json({
+      error: 'Automatic route lookup is not configured on this server. Add RAILRADAR_API_KEY to the server environment, then restart or redeploy.'
     });
-    res.json({ explanation: out.output_text || 'The AI returned no text.' });
-  } catch (e) {
-    console.error('AI explanation failed:', e.message || e);
-    res.status(502).json({ error: 'AI request failed. Check API key, model name and server logs.' });
+  }
+  try {
+    const url = 'https://api.railradar.in/v1/trains/' + encodeURIComponent(trainNumber) + '/route?format=geojson&stops=true';
+    const upstream = await fetch(url, {
+      method: 'GET',
+      headers: { Authorization: 'Bearer ' + routeApiKey, Accept: 'application/json' },
+      signal: AbortSignal.timeout(15000)
+    });
+    let body = null;
+    try { body = await upstream.json(); } catch (_) {}
+    if (!upstream.ok) {
+      if (upstream.status === 401 || upstream.status === 403) {
+        return res.status(502).json({ error: 'The train-route provider rejected its API key. Check RAILRADAR_API_KEY in server settings.' });
+      }
+      if (upstream.status === 429) {
+        return res.status(429).json({ error: 'The train-route provider quota or rate limit has been reached. Try again later.' });
+      }
+      if (upstream.status === 404) return res.status(404).json({ error: 'No route was found for that train number.' });
+      return res.status(502).json({ error: 'The train-route provider is temporarily unavailable.' });
+    }
+    if (body && body.success === false) {
+      return res.status(404).json({ error: body.error && body.error.message ? body.error.message : 'No route was found for that train number.' });
+    }
+    const stops = normalizeRouteStops(body);
+    if (stops.length < 2) {
+      return res.status(502).json({ error: 'The provider response did not contain an ordered station list.' });
+    }
+    const result = {
+      trainNumber,
+      routeStations: stops.map(stop => stop.code),
+      stops,
+      stopCount: stops.length,
+      source: 'RailRadar train route API',
+      fetchedAt: new Date().toISOString(),
+      cached: false
+    };
+    routeCache.set(trainNumber, { cachedAt: Date.now(), result });
+    return res.json(result);
+  } catch (error) {
+    const timedOut = error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+    return res.status(502).json({
+      error: timedOut ? 'Train-route lookup timed out. Try again.' : 'Could not reach the train-route provider. Try again shortly.'
+    });
   }
 });
+
+app.post('/api/analyze', (req, res) => {
+  try {
+    const body = req.body || {};
+    if (!body.payload) return res.status(400).json({ error: 'Upload or capture chart JSON first.' });
+    if (!Array.isArray(body.routeStations)) return res.status(400).json({ error: 'Fetch the selected train route first.' });
+    return res.json(analyze(body.payload, body.fromStation, body.toStation, body.routeStations));
+  } catch (error) {
+    return res.status(400).json({ error: error.message || 'Analysis failed.' });
+  }
+});
+
+app.post('/api/ai-explain', async (req, res) => {
+  if (!ai) return res.status(503).json({ error: 'AI is not configured. Add OPENAI_API_KEY to the server environment.' });
+  try {
+    const analysis = req.body && req.body.analysis;
+    if (!analysis || !Array.isArray(analysis.candidates)) return res.status(400).json({ error: 'Analyze the chart first.' });
+    const output = await ai.responses.create({
+      model: process.env.OPENAI_MODEL || 'gpt-5.5',
+      instructions: 'Explain the supplied train vacancy analysis in plain English. Treat it as a static snapshot. Do not invent timings, live availability, probability or TTE decisions. Do not change ranks. Clearly distinguish single-berth candidates from transfer paths.',
+      input: 'Explain these candidate paths for ' + analysis.summary.fromStation + ' to ' + analysis.summary.toStation +
+        '. Keep it short and actionable. Data: ' + JSON.stringify({
+          summary: analysis.summary, candidates: analysis.candidates.slice(0, 10), note: analysis.note
+        })
+    });
+    return res.json({ explanation: output.output_text || 'The AI returned no text.' });
+  } catch (error) {
+    console.error('AI explanation failed:', error.message || error);
+    return res.status(502).json({ error: 'AI request failed. Check API key, model name and server logs.' });
+  }
+});
+
 app.get('*', (req, res) => res.sendFile(path.join(root, 'public', 'index.html')));
 const port = Number(process.env.PORT || 3000);
 app.listen(port, () => console.log('Vacancy Scout running at http://localhost:' + port));
