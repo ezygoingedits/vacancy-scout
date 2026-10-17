@@ -224,14 +224,23 @@ app.post('/api/ai-explain', async (req, res) => {
         note: analysis.note
       })
     ].join('\n\n');
-    const response = await gemini.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
-      contents: prompt
+    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const response = await gemini.interactions.create({
+      model,
+      input: prompt,
+      store: false
     });
-    return res.json({ explanation: response.text || 'Gemini returned no text.' });
+    return res.json({ explanation: response.output_text || 'Gemini returned no text.' });
   } catch (error) {
-    console.error('Gemini explanation failed:', error && (error.message || error));
-    return res.status(502).json({ error: 'Gemini request failed. Check your API key, model name and quota.' });
+    const status = Number(error && (error.status || error.statusCode || error.httpStatus)) || 0;
+    const code = String(error && (error.code || error.name) || 'GeminiError');
+    const message = String(error && error.message || error || 'Unknown Gemini error');
+    console.error('Gemini explanation failed:', { status, code, message });
+    let hint = 'Gemini could not complete the request. Check the server logs for the exact error.';
+    if (status === 400 || status === 404) hint = 'Gemini rejected the request or model. Check GEMINI_MODEL and confirm that model is available to this API key.';
+    else if (status === 401 || status === 403) hint = 'Google rejected the API key or its permissions. Check GEMINI_API_KEY in the server environment.';
+    else if (status === 429) hint = 'Gemini quota or rate limit reached. Check the project quota and billing settings.';
+    return res.status(502).json({ error: hint, diagnosticStatus: status || null, diagnosticCode: code });
   }
 });
 
