@@ -233,12 +233,17 @@ app.post('/api/ai-explain', async (req, res) => {
       },
       body: JSON.stringify({ model, input: prompt, store: false })
     });
-    const payload = await apiResponse.json().catch(() => ({}));
+    const responseText = await apiResponse.text();
+    let payload = {};
+    try { payload = responseText ? JSON.parse(responseText) : {}; } catch (_) {}
     if (!apiResponse.ok) {
       const apiError = payload && payload.error ? payload.error : {};
-      const error = new Error(String(apiError.message || 'Google returned HTTP ' + apiResponse.status));
+      const detail = typeof apiError === 'string'
+        ? apiError
+        : (apiError.message || payload.message || responseText || 'Google returned HTTP ' + apiResponse.status);
+      const error = new Error(String(detail).slice(0, 1800));
       error.status = apiResponse.status;
-      error.code = String(apiError.status || apiError.code || 'GeminiRESTError');
+      error.code = String(apiError.status || apiError.code || payload.code || 'GeminiRESTError');
       throw error;
     }
     return res.json({ explanation: payload.output_text || 'Gemini returned no text.' });
