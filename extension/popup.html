@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vacancy Scout Capture</title>
+<style>
+body{width:300px;margin:0;padding:16px;background:#0b1020;color:#edf2ff;font:13px/1.5 system-ui,sans-serif}h1{font-size:18px;margin:0 0 6px}p{color:#a2afc8}button{width:100%;padding:10px;margin:6px 0;border:1px solid #526587;border-radius:9px;background:#d8e4ff;color:#101b32;font-weight:700;cursor:pointer}.secondary{background:#17243c;color:#edf2ff}#status{padding:9px;background:#121a2d;border:1px solid #2a3855;border-radius:9px;white-space:pre-wrap}.note{font-size:11px;color:#a2afc8}
+</style>
+</head>
+<body>
+<h1>Vacancy Scout</h1>
+<p>Capture the vacancy response from the IRCTC chart you open yourself.</p>
+<div id="status">Checking status…</div>
+<button id="toggle">Enable capture</button>
+<button id="clear" class="secondary">Clear saved chart data</button>
+<p class="note">Enable capture before loading or reloading the chart. Data is kept locally in this browser and passed to the local Vacancy Scout app. This extension does not upload the chart to a cloud service.</p>
+<script src="popup.js"></script>
+</body>
+</html>
