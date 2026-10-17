@@ -128,16 +128,70 @@ function analyze(payload, from, to, route) {
       to: segment.to, splitNo: segment.splitNo, berthCode: segment.berthCode || null
     }))
   }));
+  const allPartialOptions = segments.flatMap(segment => {
+    const overlapStart = Math.max(segment.fromIndex, startIndex);
+    const overlapEnd = Math.min(segment.toIndex, endIndex);
+    if (overlapEnd <= overlapStart) return [];
+    // Full-trip segments are already shown in the main candidate list.
+    if (segment.fromIndex <= startIndex && segment.toIndex >= endIndex) return [];
+    return [{
+      coach: segment.coach,
+      berth: segment.berth,
+      availableFrom: segment.from,
+      availableTo: segment.to,
+      journeyFrom: route[overlapStart] || segment.from,
+      journeyTo: route[overlapEnd] || segment.to,
+      coveredStationHops: overlapEnd - overlapStart,
+      startsAtBoarding: segment.fromIndex <= startIndex && segment.toIndex > startIndex,
+      reachesDestination: segment.fromIndex < endIndex && segment.toIndex >= endIndex,
+      fromIndex: overlapStart,
+      toIndex: overlapEnd,
+      splitNo: segment.splitNo,
+      berthCode: segment.berthCode || null
+    }];
+  });
+  const seenPartial = new Set();
+  const uniquePartialOptions = allPartialOptions.filter(option => {
+    const key = [option.coach, option.berth, option.availableFrom, option.availableTo, option.splitNo].join('|');
+    if (seenPartial.has(key)) return false;
+    seenPartial.add(key);
+    return true;
+  });
+  uniquePartialOptions.sort((a, b) => {
+    if (a.coveredStationHops !== b.coveredStationHops) return b.coveredStationHops - a.coveredStationHops;
+    if (a.startsAtBoarding !== b.startsAtBoarding) return Number(b.startsAtBoarding) - Number(a.startsAtBoarding);
+    if (a.reachesDestination !== b.reachesDestination) return Number(b.reachesDestination) - Number(a.reachesDestination);
+    if (a.fromIndex !== b.fromIndex) return a.fromIndex - b.fromIndex;
+    return b.toIndex - a.toIndex;
+  });
+  const partialOptions = uniquePartialOptions.slice(0, 100).map((option, index) => ({
+    rank: index + 1,
+    coach: option.coach,
+    berth: option.berth,
+    availableFrom: option.availableFrom,
+    availableTo: option.availableTo,
+    journeyFrom: option.journeyFrom,
+    journeyTo: option.journeyTo,
+    coveredStationHops: option.coveredStationHops,
+    startsAtBoarding: option.startsAtBoarding,
+    reachesDestination: option.reachesDestination,
+    splitNo: option.splitNo,
+    berthCode: option.berthCode
+  }));
   const unlisted = Array.from(new Set(rows.flatMap(row => [code(row && row.from), code(row && row.to)]).filter(station => station && !indexByStation.has(station)))).sort();
   return {
     summary: {
       recordsReceived: rows.length, validSegments: segments.length,
       candidatesFound: uniquePaths.length, returned: candidates.length,
-      directCandidates: direct.length, skipped,
+      directCandidates: direct.length,
+      partialOptionsFound: uniquePartialOptions.length,
+      partialOptionsReturned: partialOptions.length,
+      skipped,
       unlistedStationCodes: unlisted, fromStation: from, toStation: to
     },
     candidates,
-    note: 'This is a static chart snapshot, not live availability or a confirmed TTE allotment. Transfer paths need railway staff confirmation.'
+    partialOptions,
+    note: 'Only captured chart records are analyzed. Partial options cover only part of the requested trip and are not a full-journey berth. This is a static snapshot, not live availability or a confirmed TTE allotment. Transfer paths need railway staff confirmation.'
   };
 }
 
@@ -216,11 +270,13 @@ app.post('/api/ai-explain', async (req, res) => {
       'Explain the supplied train vacancy analysis in plain English.',
       'Treat it as a static snapshot. Do not invent timings, live availability, probabilities or TTE decisions.',
       'Do not change ranks. Clearly distinguish single-berth candidates from transfer paths.',
+      'Explain partial options separately and state that they do not cover the entire trip.',
       'Keep the explanation short and actionable.',
       'Analysis JSON:',
       JSON.stringify({
         summary: analysis.summary,
         candidates: analysis.candidates.slice(0, 10),
+        partialOptions: (analysis.partialOptions || []).slice(0, 10),
         note: analysis.note
       })
     ].join('\n\n');

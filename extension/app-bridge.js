@@ -10,9 +10,12 @@
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     lastAppliedAt = capture.capturedAt || new Date().toISOString();
     const status = document.getElementById('status');
-    if (status) status.textContent = 'Automatically received ' + capture.recordCount +
-      ' berth records from your IRCTC chart at ' + new Date(capture.capturedAt || Date.now()).toLocaleString() +
-      '. Click “Analyze chart” to rank the results.';
+    if (status) {
+      const responses = Number(capture.responseCount || 1);
+      status.textContent = 'Accumulated ' + capture.recordCount + ' unique berth segments from ' +
+        responses + ' chart response(s). Keep capture enabled while paging through the chart or changing station pairs. ' +
+        'Click “Analyze chart” to rank full-journey and partial options.';
+    }
   }
   chrome.runtime.onMessage.addListener((message) => {
     if (message && message.type === 'CHART_CAPTURED') applyCapture(message.capture);

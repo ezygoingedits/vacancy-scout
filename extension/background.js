@@ -24,7 +24,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || typeof message.type !== 'string') return false;
   if (message.type === 'SET_CAPTURE') {
     const enabled = message.enabled === true;
-    chrome.storage.local.set({ captureEnabled: enabled })
+    const prepare = enabled
+      ? chrome.storage.local.remove('lastCapture').then(() => chrome.storage.local.set({ captureEnabled: true }))
+      : chrome.storage.local.set({ captureEnabled: false });
+    prepare
       .then(() => sendCaptureStateToIRCTCTabs(enabled))
       .then(() => sendResponse({ ok: true, captureEnabled: enabled }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
@@ -34,7 +37,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.get({ captureEnabled: false, lastCapture: null }, (state) => {
       const c = state.lastCapture;
       sendResponse({ ok: true, captureEnabled: state.captureEnabled,
-        lastCapture: c ? { capturedAt: c.capturedAt, recordCount: c.recordCount, sourceUrl: c.sourceUrl } : null });
+        lastCapture: c ? { capturedAt: c.capturedAt, recordCount: c.recordCount, responseCount: c.responseCount || 1, batchRecordCount: c.batchRecordCount || c.recordCount, sourceUrl: c.sourceUrl } : null });
     });
     return true;
   }
@@ -79,20 +82,46 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ ok: false, error: 'No valid berth records were found.' });
       return false;
     }
-    chrome.storage.local.get({ captureEnabled: false }, (state) => {
+    chrome.storage.local.get({ captureEnabled: false, lastCapture: null }, (state) => {
       if (!state.captureEnabled) {
         sendResponse({ ok: false, error: 'Capture is switched off.' });
         return;
       }
+      const previous = state.lastCapture && state.lastCapture.payload && Array.isArray(state.lastCapture.payload.vbd)
+        ? state.lastCapture : null;
+      const previousRows = previous ? previous.payload.vbd : [];
+      const merged = new Map();
+      previousRows.concat(safeRows).forEach((row) => {
+        const key = [
+          String(row.coachName).trim().toUpperCase(),
+          String(row.berthNumber).trim(),
+          String(row.from).trim().toUpperCase(),
+          String(row.to).trim().toUpperCase(),
+          row.splitNo == null ? '' : String(row.splitNo),
+          row.berthCode == null ? '' : String(row.berthCode).trim().toUpperCase()
+        ].join('|');
+        if (!merged.has(key)) merged.set(key, row);
+      });
+      const combinedRows = Array.from(merged.values()).slice(0, 10000);
+      const now = new Date().toISOString();
       const capture = {
-        payload: { vbd: safeRows },
+        payload: { vbd: combinedRows },
         sourceUrl: parsedSender.origin + '/online-charts/api/vacantBerth',
-        capturedAt: String(message.pageCapturedAt || new Date().toISOString()),
-        recordCount: safeRows.length
+        capturedAt: now,
+        firstCapturedAt: previous && previous.firstCapturedAt ? previous.firstCapturedAt :
+          (previous && previous.capturedAt ? previous.capturedAt : now),
+        responseCount: (previous && previous.responseCount ? previous.responseCount : 0) + 1,
+        batchRecordCount: safeRows.length,
+        recordCount: combinedRows.length
       };
       chrome.storage.local.set({ lastCapture: capture })
         .then(() => passCaptureToAppTabs(capture))
-        .then(() => sendResponse({ ok: true, recordCount: safeRows.length }))
+        .then(() => sendResponse({
+          ok: true,
+          recordCount: combinedRows.length,
+          responseCount: capture.responseCount,
+          addedCount: Math.max(0, combinedRows.length - previousRows.length)
+        }))
         .catch((error) => sendResponse({ ok: false, error: error.message }));
     });
     return true;
